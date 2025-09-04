@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Absensi</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #999; padding: 8px; text-align: left; }
+    th { background: #eee; }
+    h2, h3 { margin-top: 30px; }
+    .box { padding: 15px; border: 1px solid #ccc; margin-top: 20px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h2>📊 Dashboard Absensi Siswa</h2>
+
+  <!-- Tabel Absensi Hari Ini -->
+  <h3>Absensi Hari Ini</h3>
+  <table id="tabelAbsensi">
+    <thead>
+      <tr>
+        <th>UID</th>
+        <th>Nama</th>
+        <th>Jam Masuk</th>
+        <th>Jam Pulang</th>
+        <th>Status</th>
+        <th>Keterangan</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Input Manual -->
+  <div class="box">
+    <h3>Input Manual (Sakit/Izin/Alpa)</h3>
+    <form id="manualForm">
+      <label>UID: <input type="text" id="uid" required></label><br><br>
+      <label>Nama: <input type="text" id="nama" required></label><br><br>
+      <label>Keterangan:
+        <select id="ket" required>
+          <option value="Sakit">Sakit</option>
+          <option value="Izin">Izin</option>
+          <option value="Alpa">Alpa</option>
+        </select>
+      </label><br><br>
+      <button type="submit">Simpan</button>
+    </form>
+  </div>
+
+  <!-- Tabel Belum Absen -->
+  <h3>Siswa Belum Absen Masuk Hari Ini</h3>
+  <table id="tabelBelumAbsen">
+    <thead>
+      <tr>
+        <th>UID</th>
+        <th>Nama</th>
+        <th>No WA</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwwI0vJuNcQsZ4YCsc1YEnFxB8y97ghZWz7rRbiKBTGa1zw91vy0t3lumhG418pG5BtBA/exec"; // ganti dengan URL Web App GAS kamu
+
+    async function loadAbsensi() {
+      let res = await fetch(GAS_URL + "?action=getAbsensiHariIni");
+      let data = await res.json();
+      let tbody = document.querySelector("#tabelAbsensi tbody");
+      tbody.innerHTML = "";
+      data.forEach(row => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.uid}</td><td>${row.nama}</td><td>${row.jamMasuk}</td>
+                        <td>${row.jamPulang}</td><td>${row.status}</td><td>${row.ket}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function loadBelumAbsen() {
+      let resMaster = await fetch(GAS_URL + "?action=getMasterSiswa");
+      let master = await resMaster.json();
+      let resAbsen = await fetch(GAS_URL + "?action=getAbsensiHariIni");
+      let absensi = await resAbsen.json();
+
+      let sudahAbsen = new Set(absensi.map(a => a.uid));
+      let tbody = document.querySelector("#tabelBelumAbsen tbody");
+      tbody.innerHTML = "";
+      master.forEach(s => {
+        if (!sudahAbsen.has(s.uid)) {
+          let tr = document.createElement("tr");
+          tr.innerHTML = `<td>${s.uid}</td><td>${s.nama}</td><td>${s.wa}</td>`;
+          tbody.appendChild(tr);
+        }
+      });
+    }
+
+    document.querySelector("#manualForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      let uid = document.getElementById("uid").value;
+      let nama = document.getElementById("nama").value;
+      let ket = document.getElementById("ket").value;
+
+      await fetch(GAS_URL + "?action=absen&uid=" + uid + "&nama=" + nama + "&ket=" + ket + "&status=Manual");
+      alert("Data manual disimpan!");
+      loadAbsensi();
+      loadBelumAbsen();
+    });
+
+    // Load awal
+    loadAbsensi();
+    loadBelumAbsen();
+  </script>
+</body>
+</html>
